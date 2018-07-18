@@ -1,8 +1,8 @@
 Package: maditr
 Type: Package
 Title: Pipe-Style Interface for 'data.table'
-Version: 0.5.1
-Date: 2018-05-09
+Version: 0.5.2
+Date: 2018-07-18
 Maintainer: Gregory Demin <gdemin@gmail.com>
 Authors@R: person("Gregory", "Demin", email = "gdemin@gmail.com", role = c("aut", "cre"))
 Depends: R (>= 3.3.0)
@@ -24,7 +24,7 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
 NeedsCompilation: no
-Packaged: 2018-05-09 23:28:34 UTC; gregory
+Packaged: 2018-07-18 21:27:31 UTC; gregory
 Author: Gregory Demin [aut, cre]
 Repository: CRAN
-Date/Publication: 2018-05-10 05:40:35 UTC
+Date/Publication: 2018-07-18 22:00:02 UTC
