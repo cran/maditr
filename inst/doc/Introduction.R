@@ -10,14 +10,24 @@ knitr::opts_chunk$set(echo = TRUE)
 #        mtcars %>%
 #           let(new_var = 42,
 #               new_var2 = new_var*hp) %>%
-#            head()
+#           head()
 
 ## ---- eval=FALSE---------------------------------------------------------
-#       new_var = "my_var"
-#       old_var = "mpg"
-#       mtcars %>%
-#           let((new_var) := get(old_var)*2) %>%
-#           head()
+#      new_var = "my_var"
+#      old_var = "mpg"
+#      mtcars %>%
+#          let((new_var) := get(old_var)*2) %>%
+#          head()
+#  
+#      # or,
+#      expr = quote(mean(cyl))
+#      mtcars %>%
+#          let((new_var) := eval(expr)) %>%
+#          head()
+#  
+#      # the same with `take`
+#      by_var = "vs,am"
+#      take(mtcars, (new_var) := eval(expr), by = by_var)
 
 ## ------------------------------------------------------------------------
 library(maditr)
@@ -112,6 +122,41 @@ mtcars %>%
 take(mtcars, (new_var) := eval(var))
 
 
+
+## ------------------------------------------------------------------------
+workers = fread("
+    name company
+    Nick Acme
+    John Ajax
+    Daniela Ajax
+")
+
+positions = fread("
+    name position
+    John designer
+    Daniela engineer
+    Cathie manager
+")
+
+workers
+positions
+
+## ------------------------------------------------------------------------
+workers %>% dt_inner_join(positions)
+workers %>% dt_left_join(positions)
+workers %>% dt_right_join(positions)
+workers %>% dt_full_join(positions)
+
+# filtering joins
+workers %>% dt_anti_join(positions)
+workers %>% dt_semi_join(positions)
+
+## ---- eval=FALSE---------------------------------------------------------
+#  workers %>% dt_left_join(positions, by = "name")
+
+## ---- eval=FALSE---------------------------------------------------------
+#  positions2 = setNames(positions, c("worker", "position")) # rename first column in 'positions'
+#  workers %>% dt_inner_join(positions2, by = c("name" = "worker"))
 
 ## ------------------------------------------------------------------------
 # examples from 'dplyr'
