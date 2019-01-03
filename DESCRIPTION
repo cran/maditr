@@ -1,8 +1,8 @@
 Package: maditr
 Type: Package
 Title: Pipe-Style Interface for 'data.table'
-Version: 0.6.0
-Date: 2018-08-12
+Version: 0.6.1
+Date: 2019-01-03
 Maintainer: Gregory Demin <gdemin@gmail.com>
 Authors@R: person("Gregory", "Demin", email = "gdemin@gmail.com", role = c("aut", "cre"))
 Depends: R (>= 3.3.0)
@@ -22,9 +22,9 @@ BugReports: https://github.com/gdemin/maditr/issues
 VignetteBuilder: knitr
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1
 NeedsCompilation: no
-Packaged: 2018-08-11 23:03:08 UTC; gregory
+Packaged: 2019-01-03 00:35:56 UTC; gregory
 Author: Gregory Demin [aut, cre]
 Repository: CRAN
-Date/Publication: 2018-08-12 04:20:03 UTC
+Date/Publication: 2019-01-03 06:30:03 UTC
