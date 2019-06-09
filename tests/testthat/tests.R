@@ -37,12 +37,34 @@ mt_dt2[, mpg_hp := mpg/hp][, new := mpg_hp*2]
 expect_identical(new_dt, mt_dt)
 expect_identical(new_dt, mt_dt2)
 expect_identical(new_dt2, mt_dt2)
+
+##########
+
+mt_dt = as.data.table(mtcars)
+mt_dt2 = data.table::copy(mt_dt)
+let(mt_dt, filt = am==0)
+let_if(mt_dt, filt, counter = 5)
+
+
+mt_dt2[, filt:= am==0]
+mt_dt2[(filt), counter :=5]
+
+expect_identical(mt_dt, mt_dt2)
+expect_identical(take_if(mt_dt, filt), mt_dt[filt==TRUE,])
+
 ###############
 context("take/take_if")
 mt_dt = as.data.table(mtcars)
 res = take(mtcars, fun = mean, by = am)
 res2 = take(mt_dt, fun = mean, by = am)
 res3 = mt_dt[, lapply(.SD, mean), by = am]
+expect_identical(res3, res)
+expect_identical(res3, res2)
+###############
+mt_dt = as.data.table(mtcars)
+res = take(mtcars, fun = mean, by = am, .SDcols = c("mpg", "qsec"))
+res2 = take(mt_dt, fun = mean, by = am, .SDcols = c("mpg", "qsec"))
+res3 = mt_dt[, lapply(.SD, mean), by = am, .SDcols = c("mpg", "qsec")]
 expect_identical(res3, res)
 expect_identical(res3, res2)
 ###############
@@ -137,6 +159,8 @@ expect_identical(res3, res)
 expect_identical(res3, res2)
 
 context("let/take: parametric evaluation")
+
+
 
 #############
 mt_dt = as.data.table(mtcars)

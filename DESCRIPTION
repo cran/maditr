@@ -1,8 +1,8 @@
 Package: maditr
 Type: Package
-Title: Pipe-Style Interface for 'data.table'
-Version: 0.6.1
-Date: 2019-01-03
+Title: Fast Data Aggregation, Modification, and Filtering with Pipes
+        and 'data.table'
+Version: 0.6.2
 Maintainer: Gregory Demin <gdemin@gmail.com>
 Authors@R: person("Gregory", "Demin", email = "gdemin@gmail.com", role = c("aut", "cre"))
 Depends: R (>= 3.3.0)
@@ -24,7 +24,7 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
 NeedsCompilation: no
-Packaged: 2019-01-03 00:35:56 UTC; gregory
+Packaged: 2019-06-09 12:12:26 UTC; gregory
 Author: Gregory Demin [aut, cre]
 Repository: CRAN
-Date/Publication: 2019-01-03 06:30:03 UTC
+Date/Publication: 2019-06-09 12:30:03 UTC
