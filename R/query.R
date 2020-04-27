@@ -264,7 +264,7 @@ query = function(data,
 
 
 #' @export
-query_if.default = function(data,
+query_if.data.frame = function(data,
                     i,
                     j,
                     by,
@@ -282,7 +282,6 @@ query_if.default = function(data,
                     allow.cartesian = getOption("datatable.allow.cartesian"),   # default: FALSE
                     drop = NULL,
                     on = NULL){
-    is.data.frame(data) || stop("query/query_if: 'data' should be data.frame or data.table")
     call_expr = sys.call()
     if(!is.data.table(data)){
         call_expr[[2]] = substitute(as.data.table(data))
@@ -293,7 +292,7 @@ query_if.default = function(data,
 
 
 #' @export
-query.default = function(data,
+query.data.frame = function(data,
                  j,
                  by,
                  keyby,
@@ -310,9 +309,10 @@ query.default = function(data,
                  allow.cartesian = getOption("datatable.allow.cartesian"),   # default: FALSE
                  drop = NULL,
                  on = NULL){
-    call_expr = sys.call()
+    call_expr = as.list(sys.call())
     call_expr[[1]] = as.symbol("query_if")
-    call_expr = insert_empty_i(call_expr)
+    # insert empty i
+    call_expr =  as.call(c(call_expr[1:2], list(substitute()), call_expr[-(1:2)]))
     eval.parent(call_expr)
 }
 

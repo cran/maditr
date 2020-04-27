@@ -13,6 +13,21 @@ knitr::opts_chunk$set(echo = TRUE)
 #           head()
 
 ## ---- eval=FALSE--------------------------------------------------------------
+#      iris %>%
+#        let_all(
+#            scaled = (.x - mean(.x))/sd(.x),
+#            by = Species) %>%
+#         head()
+
+## ---- eval=FALSE--------------------------------------------------------------
+#      iris %>%
+#        take_all(
+#            mean = if(startsWith(.name, "Sepal")) mean(.x),
+#            median = if(startsWith(.name, "Petal")) median(.x),
+#            by = Species
+#        )
+
+## ---- eval=FALSE--------------------------------------------------------------
 #      new_var = "my_var"
 #      old_var = "mpg"
 #      mtcars %>%
@@ -102,9 +117,49 @@ mtcars %>%
 
 # You can group by expressions:
 mtcars %>%
-    take(
-        fun = mean,
+    take_all(
+        mean,
         by = list(vsam = vs + am)
+    )
+
+# modify all non-grouping variables in-place
+mtcars %>%
+    let_all((.x - mean(.x))/sd(.x), by = am) %>%
+    head()
+
+# modify all non-grouping variables to new variables
+mtcars %>%
+    let_all(scaled = (.x - mean(.x))/sd(.x), by = am) %>%
+    head()
+
+# conditionally modify all variables
+iris %>%
+    let_all(mean = if(is.numeric(.x)) mean(.x)) %>%
+    head()
+
+# modify all variables conditionally on name
+iris %>%
+    let_all(
+        mean = if(startsWith(.name, "Sepal")) mean(.x),
+        median = if(startsWith(.name, "Petal")) median(.x),
+        by = Species
+    ) %>%
+    head()
+
+# aggregation with 'take_all'
+mtcars %>%
+    take_all(mean = mean(.x), sd = sd(.x), n = .N, by = am)
+
+# conditionally aggregate all variables
+iris %>%
+    take_all(mean = if(is.numeric(.x)) mean(.x))
+
+# aggregate all variables conditionally on name
+iris %>%
+    take_all(
+        mean = if(startsWith(.name, "Sepal")) mean(.x),
+        median = if(startsWith(.name, "Petal")) median(.x),
+        by = Species
     )
 
 # parametric evaluation:
@@ -226,6 +281,16 @@ mtcars %>%
 # select
 mtcars %>% dt_select(vs:carb, cyl)
 mtcars %>% dt_select(-am, -cyl)
+
+# regular expression pattern
+dt_select(iris, "^Petal") # variables which start from 'Petal'
+dt_select(iris, "Width$") # variables which end with 'Width'
+# move Species variable to the front
+# pattern "^." matches all variables
+dt_select(iris, Species, "^.")
+# pattern "^.*al" means "contains 'al'"
+dt_select(iris, "^.*al")
+dt_select(iris, 1:4) # numeric indexing - all variables except Species
 
 # sorting
 dt_arrange(mtcars, cyl, disp)

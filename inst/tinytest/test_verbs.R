@@ -1,5 +1,3 @@
-
-
 data(mtcars)
 
 cat("\nContext:", "errors", "\n")
@@ -31,9 +29,20 @@ expect_identical(new_dt2, mt_dt2)
 ###############
 mt_dt = as.data.table(mtcars)
 mt_dt2 = data.table::copy(mt_dt)
-new_dt = let(mt_dt, mpg_hp = mpg/hp, new = mpg_hp*2)
-new_dt2 = let(mtcars, mpg_hp = mpg/hp, new = mpg_hp*2)
-mt_dt2[, mpg_hp := mpg/hp][, new := mpg_hp*2]
+my_var = "very_new"
+new_dt = let(mt_dt, mpg_hp = mpg/hp, new = mpg_hp*2, (my_var) := mpg_hp + new)
+new_dt2 = let(mtcars, mpg_hp = mpg/hp, new = mpg_hp*2, (my_var) := mpg_hp + new)
+mt_dt2[, mpg_hp := mpg/hp][, new := mpg_hp*2][,(my_var) := mpg_hp + new]
+expect_identical(new_dt, mt_dt)
+expect_identical(new_dt, mt_dt2)
+expect_identical(new_dt2, mt_dt2)
+
+###############
+mt_dt = as.data.table(mtcars)
+mt_dt2 = data.table::copy(mt_dt)
+new_dt = let(mt_dt, mpg_hp = mean(mpg), keyby = cyl)
+new_dt2 = let(mtcars, mpg_hp = mean(mpg), keyby = cyl)
+mt_dt2[, mpg_hp := mean(mpg), keyby = cyl]
 expect_identical(new_dt, mt_dt)
 expect_identical(new_dt, mt_dt2)
 expect_identical(new_dt2, mt_dt2)
@@ -43,14 +52,14 @@ expect_identical(new_dt2, mt_dt2)
 mt_dt = as.data.table(mtcars)
 mt_dt2 = data.table::copy(mt_dt)
 let(mt_dt, filt = am==0)
-let_if(mt_dt, filt, counter = 5)
+let_if(mt_dt, (filt), counter = 5)
 
 
 mt_dt2[, filt:= am==0]
 mt_dt2[(filt), counter :=5]
 
 expect_identical(mt_dt, mt_dt2)
-expect_identical(take_if(mt_dt, filt), mt_dt[filt==TRUE,])
+expect_identical(take_if(mt_dt, (filt)), mt_dt[filt==TRUE,])
 
 ###############
 cat("\nContext:", "take/take_if", "\n")

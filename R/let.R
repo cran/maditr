@@ -1,15 +1,33 @@
 #' Modify, aggregate, select or filter data.frame/data.table
 #'
-#' \code{let} adds new variables or modify existing variables. \code{let_if}
-#' make the same thing conditionally. \code{take} aggregates data or select
-#' subset of the data by rows or columns. Both functions return
-#' \code{data.table}.
+#' \itemize{
+#' \item{let}{ adds new variables or modify existing variables. 'let_if' make
+#' the same thing on the subset of rows.}
+#' \item{take/take_if}{ aggregates data or select subset of the data by rows or
+#' columns.}
+#' \item{let_all}{ apply expressions to all variables in the dataset. It is also
+#' possible to modify the subset of the variables.}
+#' \item{take_all}{ aggregate all variables in the dataset. It is also possible
+#' to aggregate the subset of the variables.}
+#' }
+#' All functions return \code{data.table}. Expression in the 'take_all' and
+#' 'let_all' can use predefined variables: '.x' is a value of current variable ,
+#' '.name' is a name of the variable and '.index' is sequential number of the
+#' variable. '.value' is is an alias to '.x'.
 #' \itemize{
 #' \item{Add new variables: }{\code{let(mtcars, new_var = 42, new_var2 = new_var*hp)}}
 #' \item{Filter data: }{\code{take_if(mtcars, am==0)}}
 #' \item{Select variables: }{\code{take(mtcars, am, vs, mpg)}}
 #' \item{Aggregate data: }{\code{take(mtcars, mean_mpg = mean(mpg), by = am)}}
-#' \item{Aggregate all non-grouping columns: }{\code{take(mtcars, fun = mean, by = am)}}
+#' \item{Aggregate all non-grouping columns: }{\code{take_all(mtcars, mean = mean(.x), sd = sd(.x), n = .N, by = am)}}
+#' \item{Aggregate all numeric columns: }{\code{take_all(iris, if(is.numeric(.x)) mean(.x))}}
+#' \item{To modify all non-grouping variables: }{\preformatted{
+#'       iris \%>\%
+#'          let_all(
+#'              scaled = (.x - mean(.x))/sd(.x),
+#'              by = Species) \%>\%
+#'           head()}}
+#' \item{Aggregate specific columns: }{\code{take_all(iris, if(startsWith(.name, "Sepal")) mean(.x))}}
 #' }
 #'
 #' @param data data.table/data.frame data.frame will be automatically converted
@@ -22,31 +40,28 @@
 #'   b} notation. Advantages of \code{:=} is parametric assignment, e. g.
 #'   \code{(a) := 2} create variable with name which are stored in \code{a}. In
 #'   \code{let} \code{:=} can be used for multiassignment (\code{c("a", "b")  :=
-#'   list(1,2)})
+#'   list(1,2)}). Expression in the 'take_all' and 'let_all' can use predefined
+#'   variables: '.x' is a value of current variable, '.name' is a name of
+#'   the variable and '.index' is sequential number of the variable. '.value' is
+#'   is an alias to '.x'.
+#' @param suffix logical TRUE by default. For 'let_all'/'take_all'. If TRUE than
+#'   we append summary name to the end of the variable name. If FALSE summary
+#'   name will be added at the begining of the variable name.
+#' @param sep character. "_" by default. Separator between the old variables
+#'   name and prefix or suffix for 'let_all' and 'take_all'.
 #' @param by unquoted name of grouping variable of list of unquoted names of
 #'   grouping variables. For details see \link[data.table]{data.table}
 #' @param keyby Same as \code{by}, but with an additional \code{setkey()} run on the by
 #'   columns of the result, for convenience. It is common practice to use
 #'   'keyby=' routinely when you wish the result to be sorted. For details see
 #'   \link[data.table]{data.table}.
-#' @param with logical. For details see \link[data.table]{data.table}.
-#' @param nomatch Same as nomatch in match. For details see
-#'   \link[data.table]{data.table}.
-#' @param mult For details see \link[data.table]{data.table}.
-#' @param roll For details see \link[data.table]{data.table}.
-#' @param rollends For details see \link[data.table]{data.table}.
-#' @param which For details see \link[data.table]{data.table}.
 #' @param .SDcols Specifies the columns of x to be included in the special
 #'   symbol .SD which stands for Subset of data.table. May be character column
 #'   names or numeric positions. For details see \link[data.table]{data.table}.
-#' @param verbose logical. For details see \link[data.table]{data.table}.
-#' @param allow.cartesian For details see \link[data.table]{data.table}.
-#' @param drop For details see \link[data.table]{data.table}.
-#' @param on For details see \link[data.table]{data.table}.
 #' @param autoname logical. TRUE by default. Should we create names for  unnamed expressions in \code{take}?
-#' @param fun function which will be applied to all variables in \code{take}. If
-#'   there are no variables in \code{take} then it will be applied to all non-grouping
-#'   variables in the \code{data}.
+#' @param fun Function which will be applied to all variables in \code{take}. If
+#'   there are no variables in \code{take} then it will be applied to all
+#'   non-grouping variables in the \code{data}.
 #' @param na.last logical. FALSE by default. If TRUE, missing values in the data
 #'   are put last; if FALSE, they are put first.
 #' @return data.table. \code{let} returns its result invisibly.
@@ -116,8 +131,47 @@
 #'
 #' # You can group by expressions:
 #' mtcars %>%
-#'     take(fun = mean, by = list(vsam = vs + am))
+#'     take_all(mean, by = list(vsam = vs + am))
 #'
+#' # modify all non-grouping variables in-place
+#' mtcars %>%
+#'     let_all((.x - mean(.x))/sd(.x), by = am) %>%
+#'     head()
+#'
+#' # modify all non-grouping variables to new variables
+#' mtcars %>%
+#'     let_all(scaled = (.x - mean(.x))/sd(.x), by = am) %>%
+#'     head()
+#'
+#' # conditionally modify all variables
+#' iris %>%
+#'     let_all(mean = if(is.numeric(.x)) mean(.x)) %>%
+#'     head()
+#'
+#' # modify all variables conditionally on name
+#' iris %>%
+#'     let_all(
+#'         mean = if(startsWith(.name, "Sepal")) mean(.x),
+#'         median = if(startsWith(.name, "Petal")) median(.x),
+#'         by = Species
+#'     ) %>%
+#'     head()
+#'
+#' # aggregation with 'take_all'
+#' mtcars %>%
+#'     take_all(mean = mean(.x), sd = sd(.x), n = .N, by = am)
+#'
+#' # conditionally aggregate all variables
+#' iris %>%
+#'     take_all(mean = if(is.numeric(.x)) mean(.x))
+#'
+#' # aggregate all variables conditionally on name
+#' iris %>%
+#'     take_all(
+#'         mean = if(startsWith(.name, "Sepal")) mean(.x),
+#'         median = if(startsWith(.name, "Petal")) median(.x),
+#'         by = Species
+#'     )
 #'
 #' # parametric evaluation:
 #' var = quote(mean(cyl))
@@ -168,7 +222,6 @@
 #'
 #' # all together now
 #' take_if(dat, x!="a", sum(v), by=x)                       # get sum(v) by "x" for each x != "a"
-#' take_if(dat, c("b", "c"), sum(v), by = .EACHI, on="x")   # same
 #'
 #' # more on special symbols, see also ?"data.table::special-symbols"
 #' take_if(dat, .N)                           # last row
@@ -197,7 +250,7 @@
 #'
 #' take(dat, sum(v), by=list(y%%2))              # expressions in by
 #' take(dat, sum(v), by=list(bool = y%%2))       # same, using a named list to change by column name
-#' take(dat, fun = sum, by=x)                    # sum of all (other) columns for each group
+#' take_all(dat, sum, by=x)                      # sum of all (other) columns for each group
 #' take(dat,
 #'      MySum=sum(v),
 #'      MyMin=min(v),
@@ -220,88 +273,55 @@ let_if = function(data,
                   i,
                   ...,
                   by,
-                  keyby,
-                  with = TRUE,
-                  nomatch = getOption("datatable.nomatch"),
-                  mult = "all",
-                  roll = FALSE,
-                  rollends = if (roll=="nearest") c(TRUE,TRUE)
-                  else if (roll>=0) c(FALSE,TRUE)
-                  else c(TRUE,FALSE),
-                  which = FALSE,
-                  .SDcols,
-                  verbose = getOption("datatable.verbose"),                   # default: FALSE
-                  allow.cartesian = getOption("datatable.allow.cartesian"),   # default: FALSE
-                  drop = NULL,
-                  on = NULL
+                  keyby
 ){
     UseMethod("let_if")
 }
 
 #' @export
-let_if.default = function(data,
+let_if.data.frame = function(data,
                   i,
                   ...,
                   by,
-                  keyby,
-                  with = TRUE,
-                  nomatch = getOption("datatable.nomatch"),
-                  mult = "all",
-                  roll = FALSE,
-                  rollends = if (roll=="nearest") c(TRUE,TRUE)
-                  else if (roll>=0) c(FALSE,TRUE)
-                  else c(TRUE,FALSE),
-                  which = FALSE,
-                  .SDcols,
-                  verbose = getOption("datatable.verbose"),                   # default: FALSE
-                  allow.cartesian = getOption("datatable.allow.cartesian"),   # default: FALSE
-                  drop = NULL,
-                  on = NULL
+                  keyby
 ){
-    is.data.frame(data) || stop("let/let_if: 'data' should be data.frame or data.table")
-    call_expr = sys.call()
-    if(!is.data.table(data)){
-        data = as.data.table(data)
-        call_expr[[2]] = as.symbol("data")
-        curr_eval = eval
-    } else {
-        curr_eval = eval.parent
-    }
-    call_expr[[1]] = as.symbol("[")
-    call_expr = add_brackets_to_i(call_expr)
-    call_list = as.list(call_expr)
     j_list = as.list(substitute(list(...)))[-1]
     j_length = length(j_list)
     j_length>0 || stop("let/let_if: please, provide at least one expression.")
-    if(is.null(names(j_list))){
-        names(j_list) = rep("", j_length )
-    }
+
     # check for names
     all_names = names(j_list)
-    for(i in seq_along(j_list)){
-        if(all_names[i] == ""){
-            if(!is.call(j_list[[i]]) || !identical(j_list[[i]][[1]], as.symbol(":="))){
-                stop(sprintf("let/let_if: '%s' - incorrect expression. All expressions should be
-                             in the form  'var_name = expression' or 'var_name := expression'.", safe_deparse(j_list[[i]])))
-            }
-        }
+    if(is.null(all_names)){
+        all_names = rep("", j_length)
     }
-    i_position = 3
-    call_list = call_list[-(seq_len(j_length) + i_position)]
-    call_list = c(call_list[1:3], list(NULL), call_list[-(1:i_position)]) # reserve position for j
-    for(i in seq_along(j_list)){
-        if(all_names[i]==""){
-            call_list[[i_position + 1]] = j_list[[i]]
-        } else {
-            curr_name = all_names[i]
-            curr_expr = j_list[[i]]
-            call_list[[i_position + 1]] = substitute(`:=`(curr_name, curr_expr))
-        }
-        call_expr = as.call(call_list)
-        curr_eval(call_expr)
-    }
+    for(each in seq_along(all_names)){
+        (all_names[each] == "") &&
+            !(is.call(j_list[[each]]) && identical(j_list[[each]][[1]], as.symbol(":="))) &&
+            stop(sprintf("let/let_if: '%s' - incorrect expression. All expressions should be
+                             in the form  'var_name = expression' or 'var_name := expression'.", safe_deparse(j_list[[each]])))
 
-    data
+        if(all_names[each]!=""){
+            curr_name = all_names[each]
+            curr_expr = j_list[[each]]
+            j_list[[each]] = substitute(`:=`(curr_name, curr_expr))
+        }
+    }
+    ####
+    if(is.data.table(data)){
+        first_expr_part = substitute(data)
+    } else {
+        first_expr_part = substitute(as.data.table(data))
+    }
+    curr_expr = substitute(data[i, , by = by, keyby = keyby])
+    curr_expr[[2]] =  first_expr_part
+    curr_expr[[4]] = j_list[[1]]
+    for(expr in j_list[-1]){
+        new_expr = curr_expr
+        new_expr[[2]] = curr_expr
+        new_expr[[4]] = expr
+        curr_expr = new_expr
+    }
+    eval.parent(curr_expr)
 }
 
 #' @rdname let_if
@@ -311,19 +331,7 @@ take_if = function(data,
                    ...,
                    by,
                    keyby,
-                   with = TRUE,
-                   nomatch = getOption("datatable.nomatch"),
-                   mult = "all",
-                   roll = FALSE,
-                   rollends = if (roll=="nearest") c(TRUE,TRUE)
-                   else if (roll>=0) c(FALSE,TRUE)
-                   else c(TRUE,FALSE),
-                   which = FALSE,
                    .SDcols,
-                   verbose = getOption("datatable.verbose"),                   # default: FALSE
-                   allow.cartesian = getOption("datatable.allow.cartesian"),   # default: FALSE
-                   drop = NULL,
-                   on = NULL,
                    autoname = TRUE,
                    fun = NULL
 ){
@@ -331,87 +339,50 @@ take_if = function(data,
 }
 
 #' @export
-take_if.default = function(data,
-                   i,
-                   ...,
-                   by,
-                   keyby,
-                   with = TRUE,
-                   nomatch = getOption("datatable.nomatch"),
-                   mult = "all",
-                   roll = FALSE,
-                   rollends = if (roll=="nearest") c(TRUE,TRUE)
-                   else if (roll>=0) c(FALSE,TRUE)
-                   else c(TRUE,FALSE),
-                   which = FALSE,
-                   .SDcols,
-                   verbose = getOption("datatable.verbose"),                   # default: FALSE
-                   allow.cartesian = getOption("datatable.allow.cartesian"),   # default: FALSE
-                   drop = NULL,
-                   on = NULL,
-                   autoname = TRUE,
-                   fun = NULL
+take_if.data.frame = function(data,
+                              i,
+                              ...,
+                              by,
+                              keyby,
+                              .SDcols,
+                              autoname = TRUE,
+                              fun = NULL
 ){
-    is.data.frame(data) || stop("take/take_if: 'data' should be data.frame or data.table")
-    call_expr = sys.call()
-    if(!is.data.table(data)){
-        call_expr[[2]] = substitute(as.data.table(data))
-    }
-    call_expr[[1]] = as.symbol("[")
-
-    ### remove autoname argument
-    call_list = as.list(call_expr)
-    if(any(c("autoname", "fun") %in% names(call_list))) {
-        call_list = call_list[!(names(call_list) %in% c("autoname", "fun"))]
-    }
-    ###########
     j_expr = substitute(list(...))
-    j_length = length(j_expr) - 1
-    i_position = 3
-    if(j_length>0){
+    j_expr = as.list(j_expr)[-1]
+    j_length = length(j_expr)
 
-        ## parse ':=' expression
-        j_expr = as.list(j_expr)
-        if(is.null(names(j_expr))){
-            names(j_expr) = rep("", j_length +1)
-        }
-        for(i in seq_along(j_expr)[-1]){
-            if(is.call(j_expr[[i]]) && identical(j_expr[[i]][[1]], as.symbol(":="))){
-                name_expr = j_expr[[i]][[2]]
-                j_expr[[i]] = j_expr[[i]][[3]]
-                if(is.call(name_expr)){
-                    names(j_expr)[i] = eval.parent(name_expr)
-                } else {
-                    if(is.character(name_expr)){
-                        names(j_expr)[i] = name_expr
-                    } else {
-                        names(j_expr)[i] = safe_deparse(name_expr)
-                    }
-                }
-            }
-        }
-        j_expr = as.call(j_expr)
-        #################
-        if(autoname){
-            j_expr = add_names_to_quoted_list(j_expr)
-        }
+    if(j_length == 0){
+        # no j-arguments
         if(is.null(fun)){
-            call_list = call_list[-(seq_len(j_length) + i_position)]
-            call_list = c(call_list[1:3], list(j_expr), call_list[-(1:i_position)])
-            call_expr = as.call(call_list)
-        } else {
-            call_list = call_list[-(seq_len(j_length) + i_position)]
-            call_list = c(call_list[1:3], list(substitute(lapply(j_expr, fun))), call_list[-(1:i_position)])
-            call_expr = as.call(call_list)
+            return(
+                eval.parent(substitute(query_if(data, i)))
+            )
+
         }
-    } else {
-        if(!is.null(fun)){
-            call_list = c(call_list[1:3], list(substitute(lapply(.SD, fun))), call_list[-(1:3)])
-            call_expr = as.call(call_list)
-        }
+        return(
+            eval.parent(substitute(query_if(data, i,
+                                            lapply(.SD, fun),
+                                            by = by,
+                                            keyby = keyby,
+                                            .SDcols = .SDcols)))
+        )
     }
-    call_expr = add_brackets_to_i(call_expr)
-    eval.parent(call_expr)
+    # naming
+    j_expr = add_names_from_walrus_assignement(j_expr, envir = parent.frame())
+    if(autoname){
+        j_expr = add_names_to_quoted_list(j_expr)
+    }
+    j_expr = as.call(c(list(quote(list)), j_expr))
+    ###################
+    # TODO make 'fun' deprecated in favor for 'take_all'?
+    if(!is.null(fun)){
+        j_expr = substitute(lapply(j_expr, fun))
+    }
+    eval.parent(substitute(query_if(data, i, j_expr,
+                               by = by,
+                               keyby = keyby,
+                               .SDcols = .SDcols)))
 }
 
 #' @rdname let_if
@@ -420,19 +391,7 @@ take = function(data,
                 ...,
                 by,
                 keyby,
-                with = TRUE,
-                nomatch = getOption("datatable.nomatch"),
-                mult = "all",
-                roll = FALSE,
-                rollends = if (roll=="nearest") c(TRUE,TRUE)
-                else if (roll>=0) c(FALSE,TRUE)
-                else c(TRUE,FALSE),
-                which = FALSE,
                 .SDcols,
-                verbose = getOption("datatable.verbose"),                   # default: FALSE
-                allow.cartesian = getOption("datatable.allow.cartesian"),   # default: FALSE
-                drop = NULL,
-                on = NULL,
                 autoname = TRUE,
                 fun = NULL
 ){
@@ -440,30 +399,27 @@ take = function(data,
 }
 
 #' @export
-take.default = function(data,
+take.data.frame = function(data,
                 ...,
                 by,
                 keyby,
-                with = TRUE,
-                nomatch = getOption("datatable.nomatch"),
-                mult = "all",
-                roll = FALSE,
-                rollends = if (roll=="nearest") c(TRUE,TRUE)
-                else if (roll>=0) c(FALSE,TRUE)
-                else c(TRUE,FALSE),
-                which = FALSE,
                 .SDcols,
-                verbose = getOption("datatable.verbose"),                   # default: FALSE
-                allow.cartesian = getOption("datatable.allow.cartesian"),   # default: FALSE
-                drop = NULL,
-                on = NULL,
                 autoname = TRUE,
-                fun = NULL
+                fun = NULL,
+                i
 ){
-    call_expr = sys.call()
-    call_expr[[1]] = as.symbol("take_if")
-    call_expr = insert_empty_i(call_expr)
-    eval.parent(call_expr)
+    eval.parent(
+        substitute(take_if(data,
+                           i,
+                           ...,
+                           by = by,
+                           keyby = keyby,
+                           .SDcols = .SDcols,
+                           autoname = autoname,
+                           fun = fun
+                           )
+                   )
+    )
 }
 
 #' @rdname let_if
@@ -471,49 +427,33 @@ take.default = function(data,
 let = function(data,
                ...,
                by,
-               keyby,
-               with = TRUE,
-               nomatch = getOption("datatable.nomatch"),
-               mult = "all",
-               roll = FALSE,
-               rollends = if (roll=="nearest") c(TRUE,TRUE)
-               else if (roll>=0) c(FALSE,TRUE)
-               else c(TRUE,FALSE),
-               which = FALSE,
-               .SDcols,
-               verbose = getOption("datatable.verbose"),                   # default: FALSE
-               allow.cartesian = getOption("datatable.allow.cartesian"),   # default: FALSE
-               drop = NULL,
-               on = NULL
+               keyby
 ){
     UseMethod("let")
 }
 
 #' @rdname let_if
 #' @export
-let.default = function(data,
+let.data.frame = function(data,
                ...,
                by,
                keyby,
-               with = TRUE,
-               nomatch = getOption("datatable.nomatch"),
-               mult = "all",
-               roll = FALSE,
-               rollends = if (roll=="nearest") c(TRUE,TRUE)
-               else if (roll>=0) c(FALSE,TRUE)
-               else c(TRUE,FALSE),
-               which = FALSE,
-               .SDcols,
-               verbose = getOption("datatable.verbose"),                   # default: FALSE
-               allow.cartesian = getOption("datatable.allow.cartesian"),   # default: FALSE
-               drop = NULL,
-               on = NULL
+               i
 ){
-    call_expr = sys.call()
-    call_expr[[1]] = as.symbol("let_if")
-    call_expr = insert_empty_i(call_expr)
-    eval.parent(call_expr)
+    eval.parent(
+        substitute(let_if(data,
+                           i,
+                           ...,
+                           by = by,
+                           keyby = keyby
+        )
+        )
+    )
 }
+
+
+
+#######################################
 
 #' @rdname let_if
 #' @export
@@ -523,20 +463,11 @@ sort_by = function(data, ..., na.last = FALSE){
 
 
 #' @export
-sort_by.default = function(data, ..., na.last = FALSE){
-    is.data.frame(data) || stop("'sort_by': 'data' should be data.frame or data.table")
+sort_by.data.frame = function(data, ..., na.last = FALSE){
     if(!is.data.table(data)){
-        data = as.data.table(data)
-        setorder(data, ..., na.last = na.last)
+        eval.parent(substitute(setorder(as.data.table(data), ..., na.last = na.last)))
     } else {
         eval.parent(substitute(setorder(data, ..., na.last = na.last)))
     }
-    data
 }
 
-add_brackets_to_i = function(expr){
-    if(is.symbol(expr[[3]]) && !identical(expr[[3]], substitute())){
-        expr[[3]] = bquote((.(expr[[3]])))
-    }
-    expr
-}

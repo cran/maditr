@@ -11,7 +11,13 @@
 #' \item{\code{dt_summarize_all} }{the same as \code{dt_summarize} but work over all non-grouping variables.}
 #' \item{\code{dt_filter} }{Selects rows/cases where conditions are true. Rows
 #' where the condition evaluates to NA are dropped.}
-#' \item{\code{dt_select} }{Selects column/variables from the data set.}
+#' \item{\code{dt_select} }{Selects column/variables from the data set. Range of
+#' variables are supported, e. g. vs:carb. Characters which start with '^' or
+#' end with '$' considered as Perl-style regular expression patterns. For
+#' example, '^Petal' returns all variables started with 'Petal'. 'Width$'
+#' returns all variables which end with 'Width'. Pattern '^.' matches all
+#' variables and pattern '^.*my_str' is equivalent to `contains "my_str"`. See
+#' examples. }
 #' \item{\code{dt_arrange} }{sorts dataset by variable(-s). Use '-' to sort in
 #' descending order. If \code{data} is data.table then it modifies in-place.}
 #' }
@@ -104,6 +110,16 @@
 #' mtcars %>% dt_select(vs:carb, cyl)
 #' mtcars %>% dt_select(-am, -cyl)
 #'
+#' # regular expression pattern
+#' dt_select(iris, "^Petal") # variables which start from 'Petal'
+#' dt_select(iris, "Width$") # variables which end with 'Width'
+#' # move Species variable to the front.
+#' # pattern "^." matches all variables
+#' dt_select(iris, Species, "^.")
+#' # pattern "^.*i" means "contains 'i'"
+#' dt_select(iris, "^.*i")
+#' dt_select(iris, 1:4) # numeric indexing - all variables except Species
+#'
 #' # sorting
 #' dt_arrange(mtcars, cyl, disp)
 #' dt_arrange(mtcars, -disp)
@@ -185,9 +201,12 @@ dt_select.default = function(data, ...){
         data = as.data.table(data)
     }
     var_list = substitute(list(...))
+
     all_indexes = as.list(seq_along(data))
     names(all_indexes) = colnames(data)
-    var_indexes = unlist(eval(var_list, all_indexes, parent.frame()))
+    var_indexes = eval(var_list, all_indexes, parent.frame())
+    var_indexes = expand_selectors(var_indexes, colnames(data))
+    var_indexes = unique(unlist(var_indexes, use.names = FALSE))
     data[, var_indexes, with = FALSE, drop = FALSE]
 }
 
@@ -228,3 +247,20 @@ dt_arrange = sort_by
 
 
 
+expand_selectors = function(selected, df_names){
+    to_expand = which(vapply(selected, function(x) is.character(x) && is_regex(x), FUN.VALUE = TRUE))
+    if(length(to_expand)==0) return(selected)
+    expanded = get_names_by_regex(selected[to_expand], df_names)
+    not_found = lengths(expanded)==0
+    any(not_found) && stop(paste("'dt_select' - there are no variables which match regex(-s): ",
+                                 paste(selected[to_expand][not_found], collapse = ", ")
+    )
+    )
+    selected[to_expand] = expanded
+    unlist(selected, recursive = TRUE, use.names = TRUE)
+}
+
+
+get_names_by_regex = function(regex, df_names){
+    lapply(regex, grep, x = df_names, perl = TRUE)
+}
