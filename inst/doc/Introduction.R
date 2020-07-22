@@ -44,9 +44,45 @@ knitr::opts_chunk$set(echo = TRUE)
 #      by_var = "vs,am"
 #      take(mtcars, (new_var) := eval(expr), by = by_var)
 
-## -----------------------------------------------------------------------------
+## ----include=FALSE------------------------------------------------------------
 library(maditr)
 
+## -----------------------------------------------------------------------------
+
+workers = fread("
+    name company
+    Nick Acme
+    John Ajax
+    Daniela Ajax
+")
+
+positions = fread("
+    name position
+    John designer
+    Daniela engineer
+    Cathie manager
+")
+
+# xlookup
+workers = let(workers,
+  position = xlookup(name, positions$name, positions$position)
+)
+
+# vlookup
+# by default we search in the first column and return values from secomd column
+workers = let(workers,
+  position = vlookup(name, positions)
+)
+
+# the same 
+workers = let(workers,
+  position = vlookup(name, positions, result_column = "position") # or, result_column = 2 
+)
+
+head(workers)
+
+## -----------------------------------------------------------------------------
+library(maditr)
 data(mtcars)
 
 # Newly created variables are available immediately
