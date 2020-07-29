@@ -2,7 +2,7 @@ Package: maditr
 Type: Package
 Title: Fast Data Aggregation, Modification, and Filtering with Pipes
         and 'data.table'
-Version: 0.7.3
+Version: 0.7.4
 Maintainer: Gregory Demin <gdemin@gmail.com>
 Authors@R: person("Gregory", "Demin", email = "gdemin@gmail.com", role = c("aut", "cre"))
 Depends: R (>= 3.3.0)
@@ -22,7 +22,7 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1
 NeedsCompilation: no
-Packaged: 2020-07-22 08:43:17 UTC; gregory
+Packaged: 2020-07-29 17:45:44 UTC; gregory
 Author: Gregory Demin [aut, cre]
 Repository: CRAN
-Date/Publication: 2020-07-22 09:00:05 UTC
+Date/Publication: 2020-07-29 18:10:03 UTC
