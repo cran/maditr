@@ -15,24 +15,58 @@ let_all = function(data,
 }
 
 #' @export
-let_all.data.frame = function(data,
-                           ...,
-                           by,
-                           keyby,
-                           .SDcols,
-                           suffix = TRUE,
-                           sep = "_",
-                           i
+let_all.etable = function(data,
+                         ...,
+                         by,
+                         keyby,
+                         .SDcols,
+                         suffix = TRUE,
+                         sep = "_",
+                         i
 ){
+    data_class = class(data)
+    data = as.data.table(data)
+    res = eval.parent(
+        substitute(maditr::let_all(data,
+                                  ...,
+                                  by = by,
+                                  keyby = keyby,
+                                  .SDcols = .SDcols,
+                                  suffix = suffix,
+                                  sep = sep,
+                                  i = i
+        )
+        )
+    )
+    setDF(res)
+    class(res) = data_class
+    res
+}
+
+#' @export
+let_all.data.frame = function(data,
+                              ...,
+                              by,
+                              keyby,
+                              .SDcols,
+                              suffix = TRUE,
+                              sep = "_",
+                              i
+){
+
+    # if data is expression we want to calculate it only once
+    data = force(data)
+
     j_expr = substitute(list(...))
+
+    parent_frame = parent.frame()
+
     j_expr = as.list(j_expr)[-1]
     (length(j_expr) == 0) && stop("'let_all' - missing expressions. You should provide at least one expression.")
 
 
     j_expr = add_names_from_walrus_assignement(j_expr, envir = parent.frame())
     j_expr = add_names_from_single_symbol(j_expr)
-
-
 
     #################
     ## naming
@@ -42,14 +76,15 @@ let_all.data.frame = function(data,
     ## if multiple symbol expr names will be prefixed/suffixed with this symbol "_"
     ## if complex expr and there is no names then original names will be left as is
     ## duplicated names will be made unique
+    #
     # we need to know resulting names
     # this is simplest method to escape complexities with by, keyby and SDCols interaction
     one_row = as.data.table(data[1,, drop = FALSE])
-    ._orig_names = eval.parent(substitute(one_row[, list(._res_names = names(.SD)),
-                                                 by = by,
-                                                 keyby = keyby,
-                                                 .SDcols = .SDcols
-                                                 ]))[["._res_names"]]
+    ._orig_names = eval.parent(substitute(maditr::query(one_row, list(._res_names = names(.SD)),
+                                                        by = by,
+                                                        keyby = keyby,
+                                                        .SDcols = .SDcols
+    )))[["._res_names"]]
     j_expr_names = names(j_expr)
     j_expr_names[!(j_expr_names %in% "")] = make.unique(j_expr_names[!(j_expr_names %in% "")])
     ._all_names = lapply(j_expr_names, function(curr_name){
@@ -68,14 +103,12 @@ let_all.data.frame = function(data,
     ###
     for(j in seq_along(j_expr)){
         expr = j_expr[[j]]
-        expr = substitute_symbols(expr, list(
-            '.value' = quote(.SD[[.name]]),
-            '.x' = quote(.SD[[.name]]),
-            '.index' = substitute(match(.name, ._data_names))
-        ))
 
 
         if((is.symbol(expr) && !identical(expr, quote(.name)) &&
+            !identical(expr, quote(.index)) &&
+            !identical(expr, quote(.x)) &&
+            !identical(expr, quote(.value)) &&
             !identical(expr, quote(.N)) &&
             !identical(expr, quote(.GRP))) ||
            (length(expr)>1 && as.character(expr[[1]]) == "function")){
@@ -84,12 +117,21 @@ let_all.data.frame = function(data,
             expr = substitute(lapply(.SD, expr))
         } else {
             # let_all(data, scale(.x))
-            expr = substitute(lapply(names(.SD), function(.name) expr))
+            expr = substitute({
+                .data_names =  ._data_names
+                lapply(names(.SD), function(.name) {
+                .value = get(.name)
+                .x = get(.name)
+                .index = match(.name, .data_names)
+                expr
+            })
+            })
         }
 
         if(identical(._all_names[[j]], ._orig_names)){
             j_expr[[j]] = substitute(
                 {
+
                     res = expr
                     # if expression returns NULL we leave this variable unchanged
                     empty = which(vapply(res, is.null, FUN.VALUE = logical(1)))
@@ -128,19 +170,17 @@ let_all.data.frame = function(data,
     }
     ####
     ._all_names = unlist(._all_names, recursive = TRUE, use.names = FALSE)
-    if(is.data.table(data)){
-        expr = substitute(data[i, (._all_names) := j_expr,
-                               by = by,
-                               keyby = keyby,
-                               .SDcols = .SDcols])
-    } else {
-        expr = substitute(as.data.table(data)[i, (._all_names) := j_expr,
-                                              by = by,
-                                              keyby = keyby,
-                                              .SDcols = .SDcols])
 
-    }
-    res = eval.parent(expr)
+    # NULL is just a placeholder
+    expr = substitute(NULL[i,
+                           (._all_names) := j_expr,
+                           by = by,
+                           keyby = keyby,
+                           .SDcols = .SDcols
+    ]
+    )
+
+    res = eval_in_parent_frame(data, expr, frame = parent_frame)
     if(length(to_drop)>0){
         res[,(names(to_drop)):=NULL]
     }
@@ -175,7 +215,11 @@ take_all.data.frame = function(data,
                                sep = "_",
                                i
 ){
+
     j_expr = substitute(list(...))
+
+    parent_frame = parent.frame()
+
     j_expr = as.list(j_expr)[-1]
     (length(j_expr) == 0) && stop("'take_all' - missing expressions. You should provide at least one expression.")
 
@@ -192,6 +236,8 @@ take_all.data.frame = function(data,
     ## if multiple symbol expr names will be prefixed/suffixed with this symbol "_"
     ## if complex expr and there is no names then original names will be left as is
     ## duplicated names will be made unique (??)
+
+    # if data is expression we want to calculate it only once
 
 
     ._data_names = names(data)
@@ -242,14 +288,13 @@ take_all.data.frame = function(data,
         j_expr = j_expr[[1]]
     }
     ####
+    # NULL is just a placeholder
+    expr = substitute(NULL[i, j_expr,
+                           by = by,
+                           keyby = keyby,
+                           .SDcols = .SDcols])
 
-    expr = substitute(query_if(data, i, j_expr,
-                               by = by,
-                               keyby = keyby,
-                               .SDcols = .SDcols)
-    )
-    # print(expr)
-    res = eval.parent(expr)
+    res = eval_in_parent_frame(data, expr, frame = parent_frame)
     setnames(res, make.unique(names(res)))
     res
 }

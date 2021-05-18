@@ -21,8 +21,7 @@
 #' descending order. If `data` is data.table then it modifies in-place.
 #'
 #' @param data data.table/data.frame data.frame will be automatically converted
-#'   to data.table. `dt_mutate`, `dt_mutate_if`, `dt_mutate_if`
-#'   modify data.table object in-place.
+#'   to data.table. `dt_mutate` modify data.table object in-place.
 #' @param ... List of variables or name-value pairs of summary/modifications
 #'   functions. The name will be the name of the variable in the result. In the
 #'   `mutate` function we can use `a = b` or `a := b` notation.
@@ -38,6 +37,7 @@
 #'   `dt_summarize` and `dt_summarize_all`.
 #' @param na.last logical. FALSE by default. If TRUE, missing values in the data
 #'   are put last; if FALSE, they are put first.
+#' @return data.table
 #' @export
 #' @examples
 #' # examples from 'dplyr'
@@ -122,45 +122,16 @@
 #' dt_arrange(mtcars, cyl, disp)
 #' dt_arrange(mtcars, -disp)
 dt_mutate = function(data, ..., by){
-    eval.parent(substitute(let(data, ...,
+    eval.parent(substitute(maditr::let(data, ...,
                                by = by))
     )
 }
 
-# \code{dt_mutate_if} completely different from 'dplyr' \code{mutate_if}.
-# It modifies subset of rows rather than subset of columns as in 'dplyr'
-# \item{\code{dt_mutate_if} }{makes the same thing as \code{dt_mutate} but
-# conditionally on subset of rows.}
-# @param i integer/logical vector. Supposed to use to
-#   modify subset of rows in \code{data}.
-# @rdname dt_mutate
-# @export
-# dt_mutate_if = function(data, i, ..., by, keyby){
-#     if(!is.data.frame(data)) stop("dt_mutate_if: 'data' should be data.frame or data.table")
-#     if(!is.data.table(data)){
-#         data = as.data.table(data)
-#     }
-#     filt__ = eval.parent(
-#         substitute(data[, i, by = by, keyby = keyby])
-#     )
-#     if(!(NROW(filt___)==1 || NROW(filt___)==NROW(data))) {
-#         stop(sprintf("dt_mutate_if: incorrect number of rows in condition: %s. 'data' have %s rows.", NROW(filt___), NROW(filt___)))
-#     }
-#     if(is.data.table(filt__)){
-#         filt___ = Reduce(f = `&`, filt___)
-#     }
-#     eval.parent(substitute(let_if(data,
-#                                   filt__,
-#                                   ...,
-#                                   by = by,
-#                                   keyby = keyby)
-#     ))
-# }
 
 #' @rdname dt_mutate
 #' @export
 dt_summarize = function(data, ..., by, keyby, fun = NULL){
-    eval.parent(substitute(take(data, ...,
+    eval.parent(substitute(maditr::take(data, ...,
                                 by = by,
                                 keyby = keyby,
                                 fun = fun))
@@ -171,7 +142,7 @@ dt_summarize = function(data, ..., by, keyby, fun = NULL){
 #' @export
 dt_summarize_all = function(data, fun, by, keyby){
     !missing(fun) || stop("'dt_summarize_all': argument 'fun' is missing.")
-    eval.parent(substitute(take(data,
+    eval.parent(substitute(maditr::take(data,
                                 by = by,
                                 keyby = keyby,
                                 fun = fun))
@@ -188,55 +159,15 @@ dt_summarise_all = dt_summarize_all
 
 #' @rdname dt_mutate
 #' @export
-dt_select = function(data, ...){
-    UseMethod("dt_select")
-}
+dt_select = columns
 
-#' @export
-dt_select.default = function(data, ...){
-    is.data.frame(data) || stop("dt_select: 'data' should be data.frame or data.table")
-    if(!is.data.table(data)){
-        data = as.data.table(data)
-    }
-    var_list = substitute(list(...))
 
-    all_indexes = as.list(seq_along(data))
-    names(all_indexes) = colnames(data)
-    var_indexes = eval(var_list, all_indexes, parent.frame())
-    var_indexes = expand_selectors(var_indexes, colnames(data))
-    var_indexes = unique(unlist(var_indexes, use.names = FALSE))
-    data[, var_indexes, with = FALSE, drop = FALSE]
-}
 
 #' @rdname dt_mutate
 #' @export
-dt_filter = function(data, ...){
-    UseMethod("dt_filter")
-}
+dt_filter = rows
 
 
-#' @export
-dt_filter.default = function(data, ...){
-    is.data.frame(data) || stop("dt_filter: 'data' should be data.frame or data.table")
-    curr_names = names(substitute(list(...)))
-    if(!is.null(curr_names)){
-        if(any(c("by", "keyby") %in% curr_names)){
-            stop("'dt_filter': you try to use 'by' or 'keyby'. Sorry, but by now grouped filtering is not supported.")
-        }
-        curr_names = curr_names[curr_names!=""][[1]]
-        stop(sprintf("'dt_filter': it seems you use '=' instead of '==': %s.", curr_names))
-    }
-    if(!is.data.table(data)){
-        eval.parent(substitute(
-            as.data.table(data)[Reduce(f = '&', list(...)), ]
-        ))
-    } else {
-        eval.parent(substitute(
-            data[Reduce(f = '&', list(...)), ]
-        ))
-    }
-
-}
 
 #' @rdname dt_mutate
 #' @export
@@ -245,20 +176,3 @@ dt_arrange = sort_by
 
 
 
-expand_selectors = function(selected, df_names){
-    to_expand = which(vapply(selected, function(x) is.character(x) && is_regex(x), FUN.VALUE = TRUE))
-    if(length(to_expand)==0) return(selected)
-    expanded = get_names_by_regex(selected[to_expand], df_names)
-    not_found = lengths(expanded)==0
-    any(not_found) && stop(paste("'dt_select' - there are no variables which match regex(-s): ",
-                                 paste(selected[to_expand][not_found], collapse = ", ")
-    )
-    )
-    selected[to_expand] = expanded
-    unlist(selected, recursive = TRUE, use.names = TRUE)
-}
-
-
-get_names_by_regex = function(regex, df_names){
-    lapply(regex, grep, x = df_names, perl = TRUE)
-}

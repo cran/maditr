@@ -126,3 +126,4 @@ df \%>\%
 \author{
 Matt Dowle \href{mailto:mattjdowle@gmail.com}{mattjdowle@gmail.com}
 }
+\keyword{internal}

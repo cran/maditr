@@ -52,7 +52,7 @@
 #' @return data.table
 #' @author Matt Dowle <mattjdowle@gmail.com>
 #' @export
-#'
+#' @keywords internal
 #' @examples
 #' # examples from 'tidyr' package
 #' stocks = data.frame(
@@ -85,7 +85,7 @@ dcast.data.frame = function(data, formula, fun.aggregate = NULL, sep = "_",
                  verbose = getOption("datatable.verbose")){
     curr_call = sys.call()
     curr_call[[1]] = quote(data.table::dcast.data.table)
-    curr_call[[2]] = substitute(as.data.table(data))
+    curr_call[[2]] = substitute(data.table::as.data.table(data))
     eval.parent(curr_call)
 }
 
@@ -108,7 +108,7 @@ melt.data.frame = function(data, id.vars, measure.vars,
                 verbose = getOption("datatable.verbose")){
     curr_call = sys.call()
     curr_call[[1]] = quote(data.table::melt.data.table)
-    curr_call[[2]] = substitute(as.data.table(data))
+    curr_call[[2]] = substitute(data.table::as.data.table(data))
     eval.parent(curr_call)
 }
 

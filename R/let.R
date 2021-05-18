@@ -2,8 +2,7 @@
 #'
 #' - `let` adds new variables or modify existing variables. 'let_if' make
 #' the same thing on the subset of rows.
-#' - `take/take_if` aggregate data or select subset of the data by rows or
-#' columns.
+#' - `take/take_if` aggregate data or aggregate subset of the data.
 #' - `let_all` applies expressions to all variables in the dataset. It is also
 #' possible to modify the subset of the variables.
 #' - `take_all` aggregates all variables in the dataset. It is also possible
@@ -15,7 +14,6 @@
 #' '.name' is a name of the variable and '.index' is sequential number of the
 #' variable. '.value' is is an alias to '.x'.
 #' - Add new variables: `let(mtcars, new_var = 42, new_var2 = new_var*hp)`
-#' - Filter data: `take_if(mtcars, am==0)`
 #' - Select variables: `take(mtcars, am, vs, mpg)`
 #' - Aggregate data: `take(mtcars, mean_mpg = mean(mpg), by = am)`
 #' - Aggregate all non-grouping columns: `take_all(mtcars, mean = mean(.x), sd = sd(.x), n = .N, by = am)`
@@ -29,6 +27,25 @@
 #'           head()
 #'  ```
 #' - Aggregate specific columns: `take_all(iris, if(startsWith(.name, "Sepal")) mean(.x))`
+#' ```
+#' ```
+#' You can use 'columns' inside expression in the 'take'/'let'. 'columns' will
+#' be replaced with data.table with selected columns. In 'let' in the
+#' expressions with ':=', 'cols' or '%to%' can be placed in the left part of the
+#' expression. It is usefull for multiple assignment.
+#' There are four ways of column selection:
+#' 1. Simply by column names
+#' 2. By variable ranges, e. g. vs:carb. Alternatively, you can use '%to%'
+#' instead of colon: 'vs %to% carb'.
+#' 3. With regular expressions. Characters which start with '^' or end with '$'
+#' considered as Perl-style regular expression patterns. For example, '^Petal'
+#' returns all variables started with 'Petal'. 'Width$' returns all variables
+#' which end with 'Width'. Pattern '^.' matches all variables and pattern
+#' '^.*my_str' is equivalent to contains "my_str"'.
+#' 4. By character variables with interpolated parts. Expression in the curly
+#' brackets inside characters will be evaluated in the parent frame with
+#' [text_expand]. For example, `a{1:3}` will be transformed to the names 'a1',
+#' 'a2', 'a3'. 'cols' is just a shortcut for 'columns'. See examples.
 #'
 #' @param data data.table/data.frame data.frame will be automatically converted
 #'   to data.table. `let` modify data.table object in-place.
@@ -112,14 +129,6 @@
 #'     let(cyl = cyl * var) %>%
 #'     head()
 #'
-#' # filter by condition
-#' mtcars %>%
-#'     take_if(am==0)
-#'
-#' # filter by compound condition
-#' mtcars %>%
-#'     take_if(am==0 & mpg>mean(mpg))
-#'
 #'
 #' # A 'take' with summary functions applied without 'by' argument returns an aggregated data
 #' mtcars %>%
@@ -186,6 +195,41 @@
 #'     let((new_var) := eval(var)) %>%
 #'     head()
 #' take(mtcars, (new_var) := eval(var))
+#'
+#' ########################################
+#'
+#' # variable selection
+#'
+#' # range selection
+#' iris %>%
+#'     let(
+#'         avg = rowMeans(Sepal.Length %to% Petal.Width)
+#'     ) %>%
+#'     head()
+#'
+#' # multiassignment
+#' iris %>%
+#'     let(
+#'         # starts with Sepal or Petal
+#'         multipled1 %to% multipled4 := cols("^(Sepal|Petal)")*2
+#'     ) %>%
+#'     head()
+#'
+#'
+#' mtcars %>%
+#'     let(
+#'         # text expansion
+#'         cols("scaled_{names(mtcars)}") := lapply(cols("{names(mtcars)}"), scale)
+#'     ) %>%
+#'     head()
+#'
+#' # range selection in 'by'
+#' # range selection  + additional column
+#' mtcars %>%
+#'     take(
+#'         res = sum(cols(mpg, disp %to% drat)),
+#'         by = vs %to% gear
+#'     )
 #'
 #' ########################################
 #'
@@ -279,12 +323,39 @@ let_if = function(data,
 }
 
 #' @export
+let_if.etable = function(data,
+                  i,
+                  ...,
+                  by,
+                  keyby
+){
+   data_class = class(data)
+   data = as.data.table(data)
+   res = eval.parent(
+           substitute(maditr::let_if(data,
+                                     i,
+                                     ...,
+                                     by = by,
+                                     keyby = keyby
+           )
+           )
+       )
+   setDF(res)
+   class(res) = data_class
+   res
+}
+
+#' @export
 let_if.data.frame = function(data,
                   i,
                   ...,
                   by,
                   keyby
 ){
+    # if data is expression we want to calculate it only once
+    res = force(data)
+    parent_frame = parent.frame()
+
     j_list = as.list(substitute(list(...)))[-1]
     j_length = length(j_list)
     j_length>0 || stop("let/let_if: please, provide at least one expression.")
@@ -302,26 +373,26 @@ let_if.data.frame = function(data,
 
         if(all_names[each]!=""){
             curr_name = all_names[each]
-            curr_expr = j_list[[each]]
-            j_list[[each]] = substitute(`:=`(curr_name, curr_expr))
+            expr = j_list[[each]]
+            j_list[[each]] = substitute(`:=`(curr_name, expr))
         }
+
     }
     ####
-    if(is.data.table(data)){
-        first_expr_part = substitute(data)
-    } else {
-        first_expr_part = substitute(as.data.table(data))
+
+    # NULL is just a placeholder
+    for(expr in j_list){
+        data_names = names(res)
+        expr[[2]] = replace_column_expr(expr[[2]],
+                                        data_names =  data_names,
+                                        frame = parent_frame,
+                                        new = TRUE)
+
+        expr = substitute(NULL[i, expr, by = by, keyby = keyby])
+        res = eval_in_parent_frame(res, expr, frame = parent_frame)
     }
-    curr_expr = substitute(data[i, , by = by, keyby = keyby])
-    curr_expr[[2]] =  first_expr_part
-    curr_expr[[4]] = j_list[[1]]
-    for(expr in j_list[-1]){
-        new_expr = curr_expr
-        new_expr[[2]] = curr_expr
-        new_expr[[4]] = expr
-        curr_expr = new_expr
-    }
-    eval.parent(curr_expr)
+    res
+
 }
 
 #' @rdname let_if
@@ -349,40 +420,50 @@ take_if.data.frame = function(data,
                               fun = NULL
 ){
     j_expr = substitute(list(...))
+    data = force(data)
+    parent_frame = parent.frame()
+
     j_expr = as.list(j_expr)[-1]
     j_length = length(j_expr)
+    # if data is expression we want to calculate it only once
 
+    # NULL is just a placeholder
     if(j_length == 0){
         # no j-arguments
         if(is.null(fun)){
-            return(
-                eval.parent(substitute(query_if(data, i)))
-            )
+            expr = substitute(NULL[i, ])
 
+
+        } else {
+            expr = substitute(NULL[i,
+                                   lapply(.SD, fun),
+                                   by = by,
+                                   keyby = keyby,
+                                   .SDcols = .SDcols]
+            )
         }
-        return(
-            eval.parent(substitute(query_if(data, i,
-                                            lapply(.SD, fun),
-                                            by = by,
-                                            keyby = keyby,
-                                            .SDcols = .SDcols)))
-        )
+    } else {
+        # naming
+        j_expr = add_names_from_walrus_assignement(j_expr, envir = parent.frame())
+        if(autoname){
+            j_expr = add_names_to_quoted_list(j_expr)
+        }
+        j_expr = as.call(c(list(quote(list)), j_expr))
+
+        ###################
+        if(!is.null(fun)){
+            j_expr = substitute(lapply(j_expr, fun))
+        }
+
+        expr = substitute(NULL[
+            i,
+            j_expr,
+            by = by,
+            keyby = keyby,
+            .SDcols = .SDcols
+        ])
     }
-    # naming
-    j_expr = add_names_from_walrus_assignement(j_expr, envir = parent.frame())
-    if(autoname){
-        j_expr = add_names_to_quoted_list(j_expr)
-    }
-    j_expr = as.call(c(list(quote(list)), j_expr))
-    ###################
-    # TODO make 'fun' deprecated in favor for 'take_all'?
-    if(!is.null(fun)){
-        j_expr = substitute(lapply(j_expr, fun))
-    }
-    eval.parent(substitute(query_if(data, i, j_expr,
-                               by = by,
-                               keyby = keyby,
-                               .SDcols = .SDcols)))
+    eval_in_parent_frame(data, expr, frame = parent_frame)
 }
 
 #' @rdname let_if
@@ -409,7 +490,7 @@ take.data.frame = function(data,
                 i
 ){
     eval.parent(
-        substitute(take_if(data,
+        substitute(maditr::take_if(data,
                            i,
                            ...,
                            by = by,
@@ -441,7 +522,7 @@ let.data.frame = function(data,
                i
 ){
     eval.parent(
-        substitute(let_if(data,
+        substitute(maditr::let_if(data,
                            i,
                            ...,
                            by = by,
@@ -450,6 +531,26 @@ let.data.frame = function(data,
         )
     )
 }
+
+#' @rdname let_if
+#' @export
+let.etable = function(data,
+                          ...,
+                          by,
+                          keyby,
+                          i
+){
+    eval.parent(
+        substitute(maditr::let_if(data,
+                                  i,
+                                  ...,
+                                  by = by,
+                                  keyby = keyby
+        )
+        )
+    )
+}
+
 
 
 
@@ -464,10 +565,15 @@ sort_by = function(data, ..., na.last = FALSE){
 
 #' @export
 sort_by.data.frame = function(data, ..., na.last = FALSE){
-    if(!is.data.table(data)){
-        eval.parent(substitute(setorder(as.data.table(data), ..., na.last = na.last)))
-    } else {
-        eval.parent(substitute(setorder(data, ..., na.last = na.last)))
-    }
+    # all_args = substitute(list(...))
+    # sort_order = lapply(all_args, function(item) if(is.call(item) && identical(item[[1]], quote(`-`))) -1 else 1)
+    # all_args
+    parent_frame = parent.frame()
+    # if data is expression we want to calculate it only once
+    data = force(data)
+    # NULL is just a placeholder
+    expr = substitute(data.table::setorder(NULL, ..., na.last = na.last))
+    eval_in_parent_frame(data, expr, frame = parent_frame, need_expansion = FALSE)
+
 }
 

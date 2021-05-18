@@ -11,12 +11,27 @@ expect_error(let(mtcars, am*2))
 cat("\nContext:", "let/let_if", "\n")
 mt_dt = as.data.table(mtcars)
 mt_dt2 = data.table::copy(mt_dt)
-new_dt = let_if(mt_dt, am==0, mpg_hp = mpg/hp, new = mpg_hp*2)
-new_dt2 = let_if(mtcars, am==0, mpg_hp = mpg/hp, new = mpg_hp*2)
-mt_dt2[am==0, mpg_hp := mpg/hp][am==0, new := mpg_hp*2]
+new_dt = let_if(mt_dt, am==0, mpg_hp = mpg/hp, new = mpg_hp*2, new2 := new*4)
+new_dt2 = let_if(mtcars, am==0, mpg_hp = mpg/hp, new = mpg_hp*2, new2 := new*4)
+mt_dt2[am==0, mpg_hp := mpg/hp][am==0, new := mpg_hp*2][am==0, new2 := new*4]
 expect_identical(new_dt, mt_dt)
 expect_identical(new_dt, mt_dt2)
 expect_identical(new_dt2, mt_dt2)
+
+
+# test scopes
+my_take = function(coef2){
+    take(mtcars, res = sum(am*coef2))
+}
+
+my_let = function(coef3){
+    let(mtcars, res := am*coef3)
+}
+
+
+expect_identical(my_take(3), mt_dt[, .(res = sum(am*3))])
+mt_dt = as.data.table(mtcars)
+expect_identical(my_let(3), mt_dt[, res := am*3])
 ###############
 mt_dt = as.data.table(mtcars)
 mt_dt2 = data.table::copy(mt_dt)
@@ -37,6 +52,22 @@ expect_identical(new_dt, mt_dt)
 expect_identical(new_dt, mt_dt2)
 expect_identical(new_dt2, mt_dt2)
 
+etab = data.frame(a = 1:2, b = 3:4)
+class(etab) = c("etable", class(etab))
+res = etab
+res$new = c(1, NA)
+etab2 = let_if(
+    etab,
+    1,
+    new = 1
+)
+expect_identical(res, etab2)
+res$new = 1
+etab2 = let(
+    etab,
+    new = 1
+)
+expect_identical(res, etab2)
 ###############
 mt_dt = as.data.table(mtcars)
 mt_dt2 = data.table::copy(mt_dt)
@@ -201,3 +232,12 @@ res2 = take(mt_dt, (new_var) := eval(expr1), (new_var2) := eval(expr2), by = am)
 res3 = mt_dt[, list(agg = mean(mpg), agg2 = mean(hp)), by = am]
 expect_equal(res3, res)
 expect_equal(res3, res2)
+
+
+####
+data(mtcars)
+mt_dt = as.data.table(mtcars)
+expect_identical(
+    take(mtcars, m = mean(mpg), by = cols(vs %to% gear)),
+    mt_dt[,.(m = mean(mpg)), by = .(vs, am, gear)]
+)

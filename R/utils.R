@@ -1,4 +1,7 @@
-
+# generate missing argument
+missing_arg = function(){
+    quote(expr=)
+}
 
 safe_deparse = function(expr){
     res = deparse(expr, width.cutoff = 500)
@@ -28,8 +31,42 @@ substitute_symbols = function(substitute_result, symbols) {
 }
 
 
-is_regex = function(txt){
-    startsWith(txt, "^") | endsWith(txt, "$")
+
+
+# 'expr' is result of substitute with assumption
+# that first argument is data.frame.
+# When we have huge constant instead of
+# variable in the expression, then, in the case of the error
+# we have long lag to print this error in the console.
+# This function is workaround for this issue.
+eval_in_parent_frame = function(data, expr, frame, need_expansion = TRUE){
+    `._***data***` = NULL # to pass CRAN check
+    if(!is.data.table(data)){
+        data = as.data.table(data)
+    }
+    if(need_expansion){
+        data_names = names(data)
+        # i
+        if(length(expr)>2) {
+            expr[[3]] = replace_column_expr(expr[[3]], data_names = data_names, frame = frame, type = "data.table")
+        }
+        # j
+        if(length(expr)>3) {
+            expr[[4]] = replace_column_expr(expr[[4]], data_names = data_names, frame = frame, type = "data.table")
+        }
+        if("by" %in% names(expr)){
+            curr_by = expr[["by"]]
+            if(!missing(curr_by) && is_columns(curr_by)){
+                expr[["by"]] = replace_column_expr(curr_by, data_names = data_names, frame = frame, type = "names")
+            }
+        }
+    }
+    assign("._***data***", data, envir = frame)
+    on.exit({
+        rm(`._***data***`, envir = frame)
+    })
+    expr[[2]] = quote(`._***data***`)
+    eval(expr, envir = frame)
 }
 
 # j_expr - list from j-expression
@@ -70,25 +107,4 @@ add_names_from_single_symbol = function(j_expr){
     j_expr
 }
 
-# @param lst list or vector
-# @param elem single number of replaced element
-# @param new_elems list or vector which should be inserted
-# substitute_list_elem = function(lst, elem, new_elems){
-#         c(
-#             lst[seq_len(elem - 1)],
-#             new_elems,
-#             lst[-seq_len(elem)]
-#         )
-# }
-
-# @param lst list or vector
-# @param elem single number of replaced element
-# @param new_elems list or vector which should be inserted
-# insert_list_elem_after = function(lst, elem, new_elems){
-#     c(
-#         lst[seq_len(elem)],
-#         new_elems,
-#         lst[-seq_len(elem)]
-#     )
-# }
 

@@ -131,15 +131,35 @@ mtcars %>%
     let(cyl = cyl * var) %>%
     head()
 
-# filter by condition
+# select rows
 mtcars %>%
-    take_if(am==0) %>% 
+    rows(am==0) %>% 
     head()
 
-# filter by compound condition
+# select rows with compound condition
 mtcars %>%
-    take_if(am==0 & mpg>mean(mpg))
+    rows(am==0 & mpg>mean(mpg))
 
+# select columns
+mtcars %>% 
+    columns(vs:carb, cyl)
+    
+mtcars %>% 
+    columns(-am, -cyl)    
+
+# regular expression pattern
+columns(iris, "^Petal") %>% head() # variables which start from 'Petal'
+columns(iris, "Width$") %>% head() # variables which end with 'Width'
+
+# move Species variable to the front
+# pattern "^." matches all variables
+columns(iris, Species, "^.") %>% head()
+
+# pattern "^.*al" means "contains 'al'"
+columns(iris, "^.*al") %>% head()
+
+# numeric indexing - all variables except Species
+columns(iris, 1:4) %>% head()
 
 # A 'take' with summary functions applied without 'by' argument returns an aggregated data
 mtcars %>%
@@ -215,6 +235,38 @@ mtcars %>%
 take(mtcars, (new_var) := eval(var))
 
 
+
+## -----------------------------------------------------------------------------
+# range selection
+iris %>% 
+    let(
+        avg = rowMeans(Sepal.Length %to% Petal.Width)
+    ) %>% 
+    head()
+
+# multiassignment
+iris %>% 
+    let(
+        # starts with Sepal or Petal
+        multipled1 %to% multipled4 := cols("^(Sepal|Petal)")*2
+    ) %>% 
+    head()
+
+
+mtcars %>% 
+    let(
+        # text expansion
+        cols("scaled_{names(mtcars)}") := lapply(cols("{names(mtcars)}"), scale)
+    ) %>% 
+    head()
+
+# range selection in 'by'
+# selection of range + additional column
+mtcars %>% 
+    take(
+        res = sum(cols(mpg, disp %to% drat)),
+        by = vs %to% gear
+    )
 
 ## -----------------------------------------------------------------------------
 workers = fread("
@@ -317,18 +369,23 @@ mtcars %>%
 
 
 # select
-mtcars %>% dt_select(vs:carb, cyl)
-mtcars %>% dt_select(-am, -cyl)
+mtcars %>% 
+  dt_select(vs:carb, cyl) %>% 
+  head()
+
+mtcars %>% 
+  dt_select(-am, -cyl) %>% 
+  head()
 
 # regular expression pattern
-dt_select(iris, "^Petal") # variables which start from 'Petal'
-dt_select(iris, "Width$") # variables which end with 'Width'
+dt_select(iris, "^Petal") %>% head() # variables which start from 'Petal'
+dt_select(iris, "Width$") %>% head()  # variables which end with 'Width'
 # move Species variable to the front
 # pattern "^." matches all variables
-dt_select(iris, Species, "^.")
+dt_select(iris, Species, "^.") %>% head() 
 # pattern "^.*al" means "contains 'al'"
-dt_select(iris, "^.*al")
-dt_select(iris, 1:4) # numeric indexing - all variables except Species
+dt_select(iris, "^.*al") %>% head() 
+dt_select(iris, 1:4) %>% head()  # numeric indexing - all variables except Species
 
 # sorting
 dt_arrange(mtcars, cyl, disp)

@@ -4,9 +4,15 @@ scale2 = function(x) c(scale(x))
 data(iris)
 data(mtcars)
 dt_iris = as.data.table(iris)
+dt_mt = as.data.table(mtcars)
 expect_equal(
     let_all(iris, if(is.numeric(.x)) scale2(.x)),
     dt_iris[, names(dt_iris[,-5]) := lapply(.SD, scale2), .SDcols = -5]
+)
+
+expect_equal(
+let_all(mtcars, wow = if(.index==2) .x, by = cyl),
+dt_mt
 )
 
 dt_iris = as.data.table(iris)
@@ -152,3 +158,16 @@ expect_equal(
     let_all(iris, mean = mean, .SDcols = -"Species"),
     dt_iris[,paste0(names(dt_iris)[-5], "_mean") := lapply(.SD, mean), .SDcols = -"Species"]
 )
+
+
+#### with etable
+
+etab = data.frame(a = 1:2, b = 3:4)
+class(etab) = c("etable", class(etab))
+res = etab
+res$a_new = res$a + 1
+res$b_new = res$b + 1
+
+etab2 = let_all(etab, new = .x + 1)
+expect_identical(etab2, res)
+
