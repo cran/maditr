@@ -1,8 +1,8 @@
-dcfda2d31eea0bb668f5774725acb682 *DESCRIPTION
+e95e7e6abb6eef467ea1c57e5ca90744 *DESCRIPTION
 a236174ddfc947179a9edd64386984d7 *NAMESPACE
-6d42bca29026b8a923b03b281beccf2b *NEWS
+f4a924ef1b82a18d65b6b6cb0f3fde9f *NEWS
 77ebfaf71b66d1f500b31009e0d1a948 *R/coalesce.R
-5f0ca1b08535db19a4ececbc60cd85e6 *R/columns.R
+bafc71e78cf0e3b747f6b36f9e70a0bd *R/columns.R
 267bb60790436ec335284c2f5d984023 *R/cube.R
 a592a972e3f7936aedeca657e9851f68 *R/dcast.R
 f64a97498e9891eff71f009106c47dcf *R/dt_utils.R
@@ -18,7 +18,7 @@ eb0018b20937b966953aa7eedae0ea69 *R/to_wide.R
 70f77871536de147b716c7a37c9338a5 *R/utils.R
 a6f776fa48813bed65cbbddd4cc42a8c *R/verbs.R
 efce82970eae72424572cdbd14c3aa3a *R/vlookup.R
-812b79c303a64f8c636b539cacba704f *build/vignette.rds
+26de5cdf6ebdb3c4eb329401adbe7cd6 *build/vignette.rds
 c9cd9e04d8dcaab2e64d08a2598a7b1f *inst/doc/Introduction.R
 651a9e8b01cfeb6714644463f3dbfce7 *inst/doc/Introduction.Rmd
 5006b95c0ca032fc232363473f106c11 *inst/doc/Introduction.html
@@ -29,7 +29,7 @@ ff2583e8fab1bef96d7805fd6efc8940 *inst/tinytest/test_cube.R
 6f1bd0d4ae6590f424e40ea81848e6bd *inst/tinytest/test_dplyr_verbs.R
 fa88c6f3dceb914a21b31a4b78219bc1 *inst/tinytest/test_join.R
 3ac7caebe28375c40076025dabaa7fd4 *inst/tinytest/test_let_all.R
-5bec2f1903eefa1e8099e9b8203e8125 *inst/tinytest/test_selectors.R
+e7cc35acf2a2c0c4b2af91876a3cd60d *inst/tinytest/test_selectors.R
 654f3638c065a405104797d5d358273d *inst/tinytest/test_take_all.R
 5380ff2268825d76431f1207765e24f0 *inst/tinytest/test_text_expand.R
 3aa00fa2f5a52deb3665ebd3deac3e1f *inst/tinytest/test_to_list.R
