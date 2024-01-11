@@ -1,5 +1,6 @@
 ## ----setup, include=FALSE-----------------------------------------------------
 knitr::opts_chunk$set(echo = TRUE)
+data.table::setDTthreads(2)
 
 ## ---- eval=FALSE--------------------------------------------------------------
 #       mtcars %>%
