@@ -7,7 +7,7 @@
 \alias{let}
 \alias{let.data.frame}
 \alias{let.etable}
-\alias{sort_by}
+\alias{sort_by.data.table}
 \alias{let_all}
 \alias{take_all}
 \title{Modify, aggregate, select or filter data.frame/data.table}
@@ -24,7 +24,7 @@ let(data, ..., by, keyby)
 
 \method{let}{etable}(data, ..., by, keyby, i)
 
-sort_by(data, ..., na.last = FALSE)
+\method{sort_by}{data.table}(x, y, ..., na.last = FALSE)
 
 let_all(data, ..., by, keyby, .SDcols, suffix = TRUE, sep = "_", i)
 
@@ -63,6 +63,10 @@ names or numeric positions. For details see \link[data.table:data.table]{data.ta
 \item{fun}{Function which will be applied to all variables in \code{take}. If
 there are no variables in \code{take} then it will be applied to all
 non-grouping variables in the \code{data}.}
+
+\item{x}{data.table in the \code{sort_by} function.}
+
+\item{y}{first sorting variable in the \code{sort_by} function.}
 
 \item{na.last}{logical. FALSE by default. If TRUE, missing values in the data
 are put last; if FALSE, they are put first.}
