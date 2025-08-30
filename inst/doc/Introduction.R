@@ -3,47 +3,47 @@ knitr::opts_chunk$set(echo = TRUE)
 data.table::setDTthreads(2)
 
 ## ----eval=FALSE---------------------------------------------------------------
+#      mtcars %>%
+#         let(mpg_hp = mpg/hp) %>%
+#         take(mean(mpg_hp), by = am)
+
+## ----eval=FALSE---------------------------------------------------------------
 #       mtcars %>%
-#          let(mpg_hp = mpg/hp) %>%
-#          take(mean(mpg_hp), by = am)
+#          let(new_var = 42,
+#              new_var2 = new_var*hp) %>%
+#          head()
 
 ## ----eval=FALSE---------------------------------------------------------------
-#        mtcars %>%
-#           let(new_var = 42,
-#               new_var2 = new_var*hp) %>%
-#           head()
+#     iris %>%
+#       let_all(
+#           scaled = (.x - mean(.x))/sd(.x),
+#           by = Species) %>%
+#        head()
 
 ## ----eval=FALSE---------------------------------------------------------------
-#      iris %>%
-#        let_all(
-#            scaled = (.x - mean(.x))/sd(.x),
-#            by = Species) %>%
+#     iris %>%
+#       take_all(
+#           mean = if(startsWith(.name, "Sepal")) mean(.x),
+#           median = if(startsWith(.name, "Petal")) median(.x),
+#           by = Species
+#       )
+
+## ----eval=FALSE---------------------------------------------------------------
+#     new_var = "my_var"
+#     old_var = "mpg"
+#     mtcars %>%
+#         let((new_var) := get(old_var)*2) %>%
 #         head()
-
-## ----eval=FALSE---------------------------------------------------------------
-#      iris %>%
-#        take_all(
-#            mean = if(startsWith(.name, "Sepal")) mean(.x),
-#            median = if(startsWith(.name, "Petal")) median(.x),
-#            by = Species
-#        )
-
-## ----eval=FALSE---------------------------------------------------------------
-#      new_var = "my_var"
-#      old_var = "mpg"
-#      mtcars %>%
-#          let((new_var) := get(old_var)*2) %>%
-#          head()
-#  
-#      # or,
-#      expr = quote(mean(cyl))
-#      mtcars %>%
-#          let((new_var) := eval(expr)) %>%
-#          head()
-#  
-#      # the same with `take`
-#      by_var = "vs,am"
-#      take(mtcars, (new_var) := eval(expr), by = by_var)
+# 
+#     # or,
+#     expr = quote(mean(cyl))
+#     mtcars %>%
+#         let((new_var) := eval(expr)) %>%
+#         head()
+# 
+#     # the same with `take`
+#     by_var = "vs,am"
+#     take(mtcars, (new_var) := eval(expr), by = by_var)
 
 ## ----include=FALSE------------------------------------------------------------
 library(maditr)
@@ -298,9 +298,9 @@ workers %>% dt_anti_join(positions)
 workers %>% dt_semi_join(positions)
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  workers %>% dt_left_join(positions, by = "name")
+# workers %>% dt_left_join(positions, by = "name")
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  positions2 = setNames(positions, c("worker", "position")) # rename first column in 'positions'
-#  workers %>% dt_inner_join(positions2, by = c("name" = "worker"))
+# positions2 = setNames(positions, c("worker", "position")) # rename first column in 'positions'
+# workers %>% dt_inner_join(positions2, by = c("name" = "worker"))
 
