@@ -1,7 +1,7 @@
-f2a26bf263a7c07ba66ed07e26dcd2f1 *DESCRIPTION
+77ef1ef9d94a634d268a7d1571701cdf *DESCRIPTION
 470fa067e1a0a2a0a5f8204e1e08b8d0 *NAMESPACE
-4f99849ba843e1ff21d70a0a85e3865b *NEWS
-77ebfaf71b66d1f500b31009e0d1a948 *R/coalesce.R
+8785e7925ce3a16ad57555fb9041d6f8 *NEWS
+96a8efbdb6f318da8d174cce57c4c1bc *R/coalesce.R
 19fce1d8c4cc12bd8189989b1907d3fd *R/columns.R
 267bb60790436ec335284c2f5d984023 *R/cube.R
 a592a972e3f7936aedeca657e9851f68 *R/dcast.R
@@ -18,7 +18,7 @@ bf6d92b64e79a778ad0c15618370a7f6 *R/text_expand.R
 70f77871536de147b716c7a37c9338a5 *R/utils.R
 7a40cd237a5cd2435e88d787fb4188cc *R/verbs.R
 efce82970eae72424572cdbd14c3aa3a *R/vlookup.R
-177cc34c5167ff60226c5f63d4c6a19e *build/vignette.rds
+8f18ad99988b014f4272059cc0e2c70c *build/vignette.rds
 0aabc9fa341484a6c6729f3d0072f9e4 *inst/doc/Introduction.R
 8b7ab65b2878f16b8f9b1344391d5892 *inst/doc/Introduction.Rmd
 bad11793819f6c008265791cf82507b5 *inst/doc/Introduction.html
@@ -37,7 +37,7 @@ e7cc35acf2a2c0c4b2af91876a3cd60d *inst/tinytest/test_selectors.R
 675827a2ae7c3aa3a7f5a474aba2197d *inst/tinytest/test_utils.R
 ec28c2afe63e06a037e94ed8d7693583 *inst/tinytest/test_verbs.R
 45e7052fbed5fc5e4bf97237a598c5ec *inst/tinytest/test_vlookup.R
-fd14b90f5fa316a9d8e78f2b0edcd207 *man/coalesce.Rd
+04eb0cd3a7bddc63242f38957abd7fa5 *man/coalesce.Rd
 e569b400641759c4c9315494cd876c29 *man/columns.Rd
 e04deaaa21e3d4e2d71ce12606514cd6 *man/copy.Rd
 188073df0b8d7dc973f0ee90f8ce3385 *man/dcast.Rd
@@ -47,7 +47,7 @@ f7adfe471e498e5c5dd4bcb6210d8d9f *man/dt_mutate.Rd
 a1b732bd8e6a62ed3706ee248cb3fca1 *man/let_if.Rd
 3bc4d361c8ddf34a76a242fbe480c603 *man/maditr-package.Rd
 ec46ce976fa2d1352ef969fd93a8e453 *man/query_if.Rd
-1843ed74e50c34f69e49ee7c118fb644 *man/reexports.Rd
+e54c9a35c77a12f35ab8b363d889abfa *man/reexports.Rd
 c9021ec23915bb34f7ca230f6d4451de *man/text_expand.Rd
 a0307deb79915350c0a8db3bf8d6b0eb *man/to_list.Rd
 9ac61f46fc3c6866de84646870044f92 *man/to_long.Rd
